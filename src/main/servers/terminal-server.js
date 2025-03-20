@@ -8,8 +8,8 @@ class TerminalServer {
    */
   executeCommand(command) {
     return new Promise((resolve, reject) => {
-      // Set maximum buffer size to handle larger outputs (increased to 5MB)
-      const maxBuffer = 5 * 1024 * 1024;
+      // Set maximum buffer size to handle larger outputs (increased to 10MB)
+      const maxBuffer = 10 * 1024 * 1024;
       
       exec(command, { maxBuffer }, (error, stdout, stderr) => {
         if (error) {
@@ -21,9 +21,9 @@ class TerminalServer {
           }
         } else {
           // Truncate extremely large outputs to prevent issues
-          const MAX_OUTPUT_LENGTH = 50000; // ~50KB max output
+          const MAX_OUTPUT_LENGTH = 100000; // ~100KB max output
           if (stdout.length > MAX_OUTPUT_LENGTH) {
-            resolve(stdout.substring(0, MAX_OUTPUT_LENGTH) + '\n\n[Output truncated due to size. First 50KB shown.]');
+            resolve(stdout.substring(0, MAX_OUTPUT_LENGTH) + '\n\n[Output truncated due to size. First 100KB shown.]');
           } else {
             resolve(stdout);
           }

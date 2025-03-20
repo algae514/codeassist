@@ -114,91 +114,157 @@ ipcMain.handle('send-message', async (event, { chatId, message }) => {
     // Add user message to conversation
     conversationManager.addUserMessage(chatId, message);
     
-    // Get the current conversation
-    const conversation = conversationManager.getConversation(chatId);
+    // Begin conversation loop
+    let continueProcessing = true;
     
-    // Send to LLM for initial response
-    const llmResponse = await llmClient.getCompletion(conversation);
-    
-    // Add assistant response to conversation
-    conversationManager.addAssistantMessage(chatId, llmResponse);
-    
-    // Parse actions from response
-    const actions = actionParser.extractActions(llmResponse);
-    
-    // Execute actions if any
-    if (actions.length > 0) {
+    while (continueProcessing) {
+      // Get the current conversation
+      const conversation = conversationManager.getConversation(chatId);
+      
+      // Send to LLM for response
+      console.log('\n[LOG] Sending conversation to LLM...');
+      const llmResponse = await llmClient.getCompletion(conversation);
+      console.log(`\n[LOG] Received LLM response (${llmResponse.length} chars):\n${llmResponse.substring(0, 300)}${llmResponse.length > 300 ? '...' : ''}`);
+      
+      // Add assistant response to conversation
+      conversationManager.addAssistantMessage(chatId, llmResponse);
+      
+      // Parse actions from response
+      console.log('\n[LOG] Starting to parse response for actions...');
+      const actions = actionParser.extractActions(llmResponse);
+      console.log(`\n[LOG] Parser found ${actions.length} actions in response`);
+      if (actions.length > 0) {
+        console.log('\n[LOG] Actions found:');
+        actions.forEach((action, index) => {
+          console.log(`[LOG] Action ${index + 1}: ${action.type} - ${action.parameters.substring(0, 100)}${action.parameters.length > 100 ? '...' : ''}`);
+        });
+      } else {
+        console.log('\n[LOG] No actions found in the response');
+      }
+      
+      // If no actions found, stop processing and wait for user input
+      if (actions.length === 0) {
+        console.log('No actions found, waiting for user input');
+        continueProcessing = false;
+        continue;
+      }
+      
       // Request user confirmation for all actions at once
-      let actionsList = actions.map(action => `${action.type}: ${action.parameters}`).join('\n');
+      console.log('\n[LOG] Requesting user confirmation for actions...');
+      
+      // Create a more concise actions list for display
+      let actionsList = '';
+      
+      // Count the number of each action type
+      const actionCounts = {};
+      actions.forEach(action => {
+        actionCounts[action.type] = (actionCounts[action.type] || 0) + 1;
+      });
+      
+      // If there's only one action, show it in detail
+      if (actions.length === 1) {
+        const action = actions[0];
+        if (action.type === 'WRITE') {
+          const pathEnd = action.parameters.indexOf(',');
+          const filePath = pathEnd !== -1 ? action.parameters.substring(0, pathEnd).trim() : action.parameters.trim();
+          actionsList = `${action.type}: ${filePath}`;
+        } else {
+          actionsList = `${action.type}: ${action.parameters.substring(0, 200)}${action.parameters.length > 200 ? '...' : ''}`;
+        }
+      } 
+      // If there are multiple actions, summarize them
+      else {
+        // Create a summary of action types
+        actionsList = Object.entries(actionCounts).map(([type, count]) => {
+          return `${type}: ${count} action${count > 1 ? 's' : ''}`;
+        }).join('\n');
+        
+        // For the first action of each type, add an example
+        actionsList += '\n\nExamples:';
+        Object.keys(actionCounts).forEach(type => {
+          const example = actions.find(a => a.type === type);
+          if (example) {
+            if (type === 'WRITE') {
+              const pathEnd = example.parameters.indexOf(',');
+              const filePath = pathEnd !== -1 ? 
+                example.parameters.substring(0, pathEnd).trim() : 
+                example.parameters.trim();
+              actionsList += `\n${type}: ${filePath}`;
+            } else {
+              actionsList += `\n${type}: ${example.parameters.substring(0, 100)}${example.parameters.length > 100 ? '...' : ''}`;
+            }
+          }
+        });
+      }
       
       const confirmOptions = {
         type: 'question',
-        buttons: ['Allow All', 'Deny All'],
+        buttons: ['Allow', 'Deny'],
         defaultId: 1, // Default to "Deny"
-        title: 'MCP Actions Confirmation',
-        message: `Allow the following actions?\n\n${actionsList}`
+        title: 'Permission',
+        message: actions.every(a => a.type === 'READ' || a.type === 'EXECUTE') ? 'Allow read?' : 'Allow write?'
       };
       
       const confirmation = await dialog.showMessageBox(mainWindow, confirmOptions);
-      const allConfirmed = confirmation.response === 0; // 0 = "Allow All", 1 = "Deny All"
+      const confirmed = confirmation.response === 0; // 0 = "Allow", 1 = "Deny"
+      console.log(`\n[LOG] User ${confirmed ? 'ALLOWED' : 'DENIED'} actions`);
       
+      if (!confirmed) {
+        // If user denies actions, add rejection message and stop processing
+        const rejectionMessage = '[MCP_ERROR] Action was denied by user.';
+        conversationManager.addSystemMessage(chatId, rejectionMessage);
+        continueProcessing = false;
+        continue;
+      }
+      
+      // Execute all confirmed actions
+      console.log('\n[LOG] Beginning execution of confirmed actions...');
       for (const action of actions) {
-        const confirmed = allConfirmed;
-        
-        if (confirmed) {
+        console.log(`\n[LOG] Executing action: ${action.type} - ${action.parameters.substring(0, 100)}${action.parameters.length > 100 ? '...' : ''}`);
+        try {
           let result;
-          // Check if action has validation errors
-          if (action.error) {
-            // Add validation error message to conversation
-            const errorMessage = actionParser.formatError(action.type, action.parameters, action.error);
-            conversationManager.addSystemMessage(chatId, errorMessage);
-            continue;
+          
+          switch (action.type) {
+            case 'EXECUTE':
+              result = await terminalServer.executeCommand(action.parameters);
+              break;
+            case 'READ':
+              result = await filesystemServer.readFile(action.parameters);
+              break;
+            case 'WRITE':
+              const [filePath, content] = action.parameters.split(',').map(p => p.trim());
+              result = await filesystemServer.writeFile(filePath, content);
+              break;
+            case 'APPEND':
+              const [appendPath, appendContent] = action.parameters.split(',').map(p => p.trim());
+              result = await filesystemServer.appendFile(appendPath, appendContent);
+              break;
+            case 'DELETE':
+              result = await filesystemServer.deleteFile(action.parameters);
+              break;
+            default:
+              result = `Unknown action type: ${action.type}`;
           }
           
-          try {
-            switch (action.type) {
-              case 'EXECUTE':
-                result = await terminalServer.executeCommand(action.parameters);
-                break;
-              case 'READ':
-                result = await filesystemServer.readFile(action.parameters);
-                break;
-              case 'WRITE':
-                const [filePath, content] = action.parameters.split(',').map(p => p.trim());
-                result = await filesystemServer.writeFile(filePath, content);
-                break;
-              case 'APPEND':
-                const [appendPath, appendContent] = action.parameters.split(',').map(p => p.trim());
-                result = await filesystemServer.appendFile(appendPath, appendContent);
-                break;
-              case 'DELETE':
-                result = await filesystemServer.deleteFile(action.parameters);
-                break;
-              default:
-                result = `Unknown action type: ${action.type}`;
-            }
-          } catch (error) {
-            result = `Error: ${error.message}`;
+          // Add result to conversation
+          console.log(`\n[LOG] Action completed successfully. Result length: ${result ? result.length : 0} chars`);
+          if (result) {
+            console.log(`\n[LOG] First 200 chars of result: ${result.substring(0, 200)}${result.length > 200 ? '...' : ''}`);
           }
           
-          // Add formatted action result to conversation using MCP protocol
-          const resultMessage = actionParser.formatResult(action.type, action.parameters, result);
+          const resultMessage = `[MCP_RESULT] The ${action.type.toLowerCase()} action with parameters "${action.parameters}" returned:\n${result}`;
           conversationManager.addSystemMessage(chatId, resultMessage);
-        } else {
-          // Add rejection message to conversation using MCP protocol
-          const rejectionMessage = `[MCP_ERROR] The ${action.type.toLowerCase()} action with parameters "${action.parameters}" was not approved by user.`;
-          conversationManager.addSystemMessage(chatId, rejectionMessage);
+          
+        } catch (error) {
+          // Add error message to conversation
+          console.log(`\n[LOG] Action failed with error: ${error.message}`);
+          const errorMessage = `[MCP_ERROR] The ${action.type.toLowerCase()} action with parameters "${action.parameters}" failed with error:\n${error.message}`;
+          conversationManager.addSystemMessage(chatId, errorMessage);
         }
       }
       
-      // Get updated conversation
-      const updatedConversation = conversationManager.getConversation(chatId);
-      
-      // Send updated conversation to LLM for final response
-      const finalResponse = await llmClient.getCompletion(updatedConversation);
-      
-      // Add final assistant message to conversation
-      conversationManager.addAssistantMessage(chatId, finalResponse);
+      // We continue the loop to let the LLM respond to the action results
+      console.log('\n[LOG] Completed action execution. Continuing to next iteration of response loop...');
     }
     
     // Return the updated conversation

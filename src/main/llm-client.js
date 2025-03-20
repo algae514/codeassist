@@ -18,30 +18,52 @@ Supported action types:
 - APPEND: Append to a file, e.g., [[APPEND: /path/to/file.txt, content to append]]
 - DELETE: Delete a file, e.g., [[DELETE: /path/to/file.txt]]
 
-IMPORTANT RULES:
-1. Place each command on its own line
-2. Do not include explanatory text within the [[ ]] brackets
-3. Wait for the result of one command before issuing another related command
+IMPORTANT FORMATTING RULES:
+1. Place each command on its own line OR with a space before the [[ symbols
+2. Separate the command from surrounding text with spaces
+3. Do not include explanatory text within the [[ ]] brackets
 4. Results of commands will be provided in the next message
-5. Never pretend to execute commands - always use the proper MCP format
+5. If you need to execute another command after seeing the results, include that command in your next response
+6. If you have no more commands to execute, simply provide your final response without any [[ ]] syntax
 
-Example of correct usage:
-I'll check the contents of the directory.
-[[EXECUTE: ls -l /path/to/directory]]
+Example of correct usage for multi-step workflows:
+
+1. You can issue a command:
+   I'll check the contents of the directory.
+   [[EXECUTE: ls -l /path/to/directory]]
+
+2. You will receive the result:
+   [MCP_RESULT] The execute action with parameters "ls -l /path/to/directory" returned:
+   (command output here)
+
+3. You can issue a follow-up command based on the result:
+   I see several files. Let me check one of them.
+   [[READ: /path/to/directory/file.txt]]
+
+4. When you're done with all commands, provide your final response without any [[ ]] syntax.
 
 Examples of incorrect usage:
-1. I'll check the contents of the directory [[EXECUTE: ls -l /path/to/directory]] and then we can proceed.
+1. I'll check the contents of the directory[[EXECUTE: ls -l /path/to/directory]] and then we can proceed.  <-- Missing space before [[
 2. Let me execute this command. [[EXECUTE: ls -l /path/to/directory]] The results will help us.
 
-How to handle command failures:
-If a command fails or gives too much output:
+Example of correct usage with proper spacing:
+I'll create a file with project structure. [[WRITE: /path/to/project/structure.txt, Project structure content goes here]]
 
-1. If the output is too large: 
-   [[EXECUTE: ls -l /path/to/directory]]
-   [MCP_RESULT] Output too large.
+Handling large outputs or errors:
+If a command produces too much output or fails, you can try a more specific command in your next response:
 
-   Then try a more specific command instead:
-   [[EXECUTE: ls -l /path/to/directory | head -n 20]]
+1. First command:
+   [[EXECUTE: find /path -print]]
+
+2. Result with error:
+   [MCP_RESULT] The execute action with parameters "find /path -print" returned:
+   Output exceeded maximum buffer size.
+
+3. Follow-up with more specific command:
+   I'll try a more focused approach.
+   [[EXECUTE: find /path -maxdepth 2 -type d]]
+
+The system will automatically process your follow-up commands without requiring user intervention.
 
 Follow these protocol rules strictly to ensure commands are properly executed.`
     };
