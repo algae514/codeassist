@@ -1,0 +1,323 @@
+Below is a comprehensive requirement document detailing how communications between the MCP servers and the LLM (specifically OpenAI models) will work in your desktop application. This document is designed to provide all necessary details for Claude to implement the system flawlessly in one go.
+
+---
+
+# Comprehensive Requirement Document: MCP Server and LLM Communication
+
+## Overview
+
+This document outlines the design and implementation of a desktop application similar to Claude, featuring embedded MCP (Micro Command Processor) servers for terminal and filesystem operations, integrated with OpenAI's large language models (LLMs). The application enables the LLM to request and execute terminal commands and file operations, with results fed back into the conversation for further processing. The focus is on creating a seamless communication flow between the MCP servers and the LLM, starting with OpenAI models, while providing a minimal chat-based user interface.
+
+The goal is to produce a fully functional application where:
+- The LLM can interact with the local system via MCP servers.
+- User interactions are intuitive and secure.
+- The system is robust, with clear requirements for implementation.
+
+---
+
+## Key Features
+
+### 1. Embedded MCP Servers
+The application includes two embedded MCP servers:
+- **Terminal MCP Server**: Executes terminal commands on the local machine and returns their output.
+- **Filesystem MCP Server**: Performs file operations (e.g., read, write, append, delete) on the local filesystem.
+
+### 2. LLM Integration
+- **Model**: OpenAI models (e.g., `gpt-3.5-turbo`, `gpt-4`).
+- **API**: OpenAI Chat Completion API for conversational interactions.
+- **Configuration**: Users can input an API key and select a model via settings.
+
+### 3. Action Requests and Execution
+- The LLM can request actions (terminal commands or file operations) using a specific syntax in its responses.
+- The application parses these requests, prompts the user for confirmation, executes approved actions via MCP servers, and returns results to the LLM.
+
+### 4. Chat Interface
+- A minimal React-based UI with:
+  - Conversation history display.
+  - Message input box and send button.
+  - Sidebar for managing multiple chat sessions.
+  - Settings for API key and model selection.
+
+### 5. Security and Error Handling
+- All actions require user confirmation to ensure safety.
+- Errors (e.g., file not found, command failure) are captured and communicated back to the LLM and user.
+
+---
+
+## Technology Stack
+
+- **Electron**: Cross-platform desktop application framework.
+- **React**: Frontend UI for the chat interface.
+- **Node.js**: Backend logic for MCP servers and API interactions.
+- **OpenAI API**: Chat Completion endpoint for LLM communication.
+- **IPC (Inter-Process Communication)**: Electron's mechanism for main-renderer communication.
+
+---
+
+## System Architecture
+
+### Components
+
+#### Main Process (Backend)
+- **MCP Servers**:
+  - **TerminalServer**: Executes commands using Node.js `child_process`.
+  - **FilesystemServer**: Handles file operations using Node.js `fs` module.
+- **LLM Client**: Manages API calls to OpenAI.
+- **Action Parser**: Extracts action requests from LLM responses.
+- **Conversation Manager**: Maintains and updates conversation history.
+- **IPC Handlers**: Facilitates communication with the renderer process.
+
+#### Renderer Process (Frontend)
+- **Chat UI**: Displays messages and handles user input.
+- **Settings UI**: Allows configuration of API key and model.
+- **Confirmation Dialog**: Prompts user to approve actions.
+
+### Communication Flow
+1. **User Input**: User sends a message via the chat UI.
+2. **Message Processing**: The app sends the message to the LLM via OpenAI API.
+3. **LLM Response**: The LLM responds, potentially including action requests.
+4. **Action Parsing**: The app identifies and extracts action requests.
+5. **User Confirmation**: Prompts the user to approve each action.
+6. **Action Execution**: Executes confirmed actions via MCP servers and collects results.
+7. **Result Feedback**: Sends results back to the LLM for further processing.
+8. **Final Response**: Displays the LLM's final response in the chat UI.
+
+---
+
+## Detailed Communication Flow
+
+### Message Format
+Conversations are maintained as a list of messages, compatible with OpenAI's Chat Completion API:
+- **Roles**: `user` (user input or action results), `assistant` (LLM responses), `system` (initial instructions).
+- **Syntax for Actions**: The LLM requests actions using `[[ACTION: parameters]]`, e.g., `[[EXECUTE: ls -l]]`, `[[READ: file.txt]]`.
+
+### Step-by-Step Process
+1. **User Sends Message**:
+   - User types a message (e.g., "What’s the size of data.txt?") and clicks send.
+   - Renderer sends the message to the main process via IPC (`send-message`).
+
+2. **Initial LLM Request**:
+   - Main process appends `{role: 'user', content: message}` to the conversation history.
+   - Sends the history to OpenAI API using the configured API key and model.
+   - Receives response, e.g., "I need to check the file size. [[EXECUTE: ls -l data.txt]]".
+   - Appends `{role: 'assistant', content: response}` to history.
+
+3. **Action Parsing**:
+   - Uses regex (e.g., `\[\[(.*?)\]\]`) to extract action requests from the response.
+   - Example: Identifies `[[EXECUTE: ls -l data.txt]]` as `{action: 'EXECUTE', parameters: 'ls -l data.txt'}`.
+
+4. **User Confirmation**:
+   - For each action, sends an IPC message (`request-confirmation`) to the renderer with action details.
+   - Renderer displays a dialog, e.g., "Allow execution of 'ls -l data.txt'? [Yes] [No]".
+   - Renderer responds via IPC (`confirm-action-response`) with user’s choice.
+
+5. **Action Execution**:
+   - If confirmed:
+     - **Terminal Command**: `TerminalServer.executeCommand('ls -l data.txt')` → output or error.
+     - **File Operation**: `FilesystemServer.readFile('data.txt')` → file contents or error.
+   - If denied: Result is "Action not approved by user."
+   - Appends result as `{role: 'user', content: 'The command "ls -l data.txt" returned: <output>'}`.
+
+6. **Second LLM Request**:
+   - Sends updated conversation history (including action results) to OpenAI API.
+   - Receives final response, e.g., "The size is 1024 bytes."
+   - Appends `{role: 'assistant', content: final_response}` to history.
+
+7. **UI Update**:
+   - Sends entire conversation history to renderer via IPC (`update-conversation`).
+   - Renderer displays messages, distinguishing user, assistant, and action results.
+
+### Example Conversation
+```
+User: What’s the size of data.txt?
+Assistant: I need to check the file size. [[EXECUTE: ls -l data.txt]]
+System: The command "ls -l data.txt" returned: -rw-r--r-- 1 user user 1024 Oct 10 12:00 data.txt
+Assistant: The size is 1024 bytes.
+```
+
+---
+
+## Action Syntax and MCP Server Functions
+
+### Supported Actions
+| Action       | Syntax                         | Parameters            | MCP Function                     | Description                       |
+|--------------|--------------------------------|-----------------------|----------------------------------|-----------------------------------|
+| EXECUTE      | `[[EXECUTE: command]]`         | Command string        | `executeCommand(command)`        | Runs a terminal command           |
+| READ         | `[[READ: file_path]]`          | File path             | `readFile(file_path)`            | Reads file contents               |
+| WRITE        | `[[WRITE: file_path, content]]`| File path, content    | `writeFile(file_path, content)`  | Writes content to file            |
+| APPEND       | `[[APPEND: file_path, content]]`| File path, content   | `appendFile(file_path, content)` | Appends content to file           |
+| DELETE       | `[[DELETE: file_path]]`        | File path             | `deleteFile(file_path)`          | Deletes a file                    |
+
+### Implementation Details
+- **TerminalServer**:
+  - Use `child_process.exec` to run commands synchronously.
+  - Return stdout or stderr as a string.
+- **FilesystemServer**:
+  - Use `fs.readFileSync`, `fs.writeFileSync`, `fs.appendFileSync`, `fs.unlinkSync`.
+  - Return contents for reads, success/error messages for others.
+- **Error Handling**:
+  - Catch exceptions (e.g., file not found) and return descriptive errors.
+
+---
+
+## LLM Guidance
+To ensure the LLM uses the action syntax correctly:
+- **System Prompt**: Include at the start of every conversation:
+  ```
+  {role: 'system', content: 'You are an AI assistant that can interact with the local system. Use [[ACTION: parameters]] to request actions. Examples: [[EXECUTE: ls -l]] to run a command, [[READ: file.txt]] to read a file. Results will be provided in the next message.'}
+  ```
+- The LLM relies on this instruction to format requests properly.
+
+---
+
+## User Interface
+
+### Chat UI
+- **Message Display**:
+  - User messages in one style (e.g., right-aligned).
+  - Assistant messages in another (e.g., left-aligned).
+  - Action results as "System" messages (e.g., italicized or grayed out).
+- **Input Area**: Text box with a "Send" button.
+- **Sidebar**: List of chat sessions (timestamp-based titles), "New Chat" button.
+
+### Settings UI
+- **API Key**: Text input field.
+- **Model Selection**: Dropdown with options (e.g., `gpt-3.5-turbo`, `gpt-4`).
+- Persist settings in memory (future: Electron storage API).
+
+### Confirmation Dialog
+- Modal dialog per action, e.g., "Allow execution of 'ls -l'? [Yes] [No]".
+
+---
+
+## Security Considerations
+- **User Confirmation**: Mandatory for all actions to prevent unauthorized operations.
+- **Command Restrictions**: Future enhancement—whitelist/blacklist for terminal commands.
+- **File Access**: Limit to user-approved directories (future scope).
+- **Error Reporting**: Inform LLM and user of failures (e.g., "File not found").
+
+---
+
+## Implementation Notes
+
+### Main Process
+- **Setup**:
+  - Initialize Electron app, create main window with React preload.
+  - Load conversation history (initially empty).
+- **IPC Handlers**:
+  - `send-message`: Triggers LLM communication flow.
+  - `confirm-action-response`: Receives user approval.
+  - `update-conversation`: Sends history to renderer.
+  - `request-confirmation`: Requests dialog display.
+- **Libraries**:
+  - `child_process` for terminal commands.
+  - `fs` for file operations.
+  - `axios` or `fetch` for OpenAI API calls.
+
+### Renderer Process
+- **React Components**:
+  - `ChatWindow`: Renders message list, input, and sidebar.
+  - `SettingsModal`: Handles API key and model input.
+  - `ConfirmationModal`: Displays action prompts.
+- **IPC Listeners**:
+  - `update-conversation`: Updates state with new history.
+  - `request-confirmation`: Shows dialog and sends response.
+
+### Conversation Management
+- Store history as an array of message objects.
+- New chats reset the array; sidebar switches between arrays (future: persist to disk).
+
+---
+
+## Example Code Snippets
+
+### Main Process (main.js)
+```javascript
+const { app, BrowserWindow, ipcMain } = require('electron');
+const { exec } = require('child_process');
+const fs = require('fs');
+const axios = require('axios');
+
+let conversation = [];
+let apiKey = ''; // Set via settings
+let model = 'gpt-3.5-turbo';
+
+function executeCommand(command) {
+  return new Promise((resolve) => {
+    exec(command, (error, stdout, stderr) => {
+      resolve(error ? stderr : stdout);
+    });
+  });
+}
+
+async function sendToOpenAI(messages) {
+  const response = await axios.post('https://api.openai.com/v1/chat/completions', {
+    model,
+    messages,
+  }, {
+    headers: { 'Authorization': `Bearer ${apiKey}` }
+  });
+  return response.data.choices[0].message.content;
+}
+
+ipcMain.on('send-message', async (event, message) => {
+  conversation.push({ role: 'user', content: message });
+  let llmResponse = await sendToOpenAI(conversation);
+  conversation.push({ role: 'assistant', content: llmResponse });
+
+  const actions = llmResponse.match(/\[\[(.*?)\]\]/g) || [];
+  for (let actionStr of actions) {
+    const [action, params] = actionStr.slice(2, -2).split(': ');
+    mainWindow.webContents.send('request-confirmation', { action, params });
+    const confirmed = await new Promise(resolve => ipcMain.once('confirm-action-response', (e, res) => resolve(res)));
+    if (confirmed) {
+      let result;
+      if (action === 'EXECUTE') result = await executeCommand(params);
+      else if (action === 'READ') result = fs.readFileSync(params, 'utf8');
+      conversation.push({ role: 'user', content: `The ${action.toLowerCase()} "${params}" returned: ${result}` });
+    }
+  }
+
+  llmResponse = await sendToOpenAI(conversation);
+  conversation.push({ role: 'assistant', content: llmResponse });
+  mainWindow.webContents.send('update-conversation', conversation);
+});
+```
+
+### Renderer Process (Chat.jsx)
+```javascript
+import React, { useState } from 'react';
+const { ipcRenderer } = window.require('electron');
+
+function Chat() {
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+
+  ipcRenderer.on('update-conversation', (event, history) => setMessages(history));
+  ipcRenderer.on('request-confirmation', (event, { action, params }) => {
+    const confirmed = window.confirm(`Allow ${action} of "${params}"?`);
+    ipcRenderer.send('confirm-action-response', confirmed);
+  });
+
+  const sendMessage = () => {
+    ipcRenderer.send('send-message', input);
+    setInput('');
+  };
+
+  return (
+    <div>
+      {messages.map((msg, i) => (
+        <div key={i} className={msg.role === 'user' && !msg.content.includes('returned') ? 'user' : 'assistant'}>
+          {msg.content}
+        </div>
+      ))}
+      <input value={input} onChange={e => setInput(e.target.value)} />
+      <button onClick={sendMessage}>Send</button>
+    </div>
+  );
+}
+```
+
+---
+
+This document provides a complete blueprint for implementing the MCP server and LLM communication system with OpenAI models. By following these specifications, Claude can build the application with all required functionality in a single, cohesive implementation.
