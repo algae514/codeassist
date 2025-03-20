@@ -128,21 +128,33 @@ ipcMain.handle('send-message', async (event, { chatId, message }) => {
     
     // Execute actions if any
     if (actions.length > 0) {
+      // Request user confirmation for all actions at once
+      let actionsList = actions.map(action => `${action.type}: ${action.parameters}`).join('\n');
+      
+      const confirmOptions = {
+        type: 'question',
+        buttons: ['Allow All', 'Deny All'],
+        defaultId: 1, // Default to "Deny"
+        title: 'MCP Actions Confirmation',
+        message: `Allow the following actions?\n\n${actionsList}`
+      };
+      
+      const confirmation = await dialog.showMessageBox(mainWindow, confirmOptions);
+      const allConfirmed = confirmation.response === 0; // 0 = "Allow All", 1 = "Deny All"
+      
       for (const action of actions) {
-        // Request user confirmation
-        const confirmOptions = {
-          type: 'question',
-          buttons: ['Allow', 'Deny'],
-          defaultId: 1, // Default to "Deny"
-          title: 'Action Confirmation',
-          message: `Allow ${action.type} of "${action.parameters}"?`
-        };
-        
-        const confirmation = await dialog.showMessageBox(mainWindow, confirmOptions);
-        const confirmed = confirmation.response === 0; // 0 = "Allow", 1 = "Deny"
+        const confirmed = allConfirmed;
         
         if (confirmed) {
           let result;
+          // Check if action has validation errors
+          if (action.error) {
+            // Add validation error message to conversation
+            const errorMessage = actionParser.formatError(action.type, action.parameters, action.error);
+            conversationManager.addSystemMessage(chatId, errorMessage);
+            continue;
+          }
+          
           try {
             switch (action.type) {
               case 'EXECUTE':
@@ -169,12 +181,12 @@ ipcMain.handle('send-message', async (event, { chatId, message }) => {
             result = `Error: ${error.message}`;
           }
           
-          // Add action result to conversation
-          const resultMessage = `The ${action.type.toLowerCase()} "${action.parameters}" returned: ${result}`;
+          // Add formatted action result to conversation using MCP protocol
+          const resultMessage = actionParser.formatResult(action.type, action.parameters, result);
           conversationManager.addSystemMessage(chatId, resultMessage);
         } else {
-          // Add rejection message to conversation
-          const rejectionMessage = `The ${action.type.toLowerCase()} "${action.parameters}" was not approved by user.`;
+          // Add rejection message to conversation using MCP protocol
+          const rejectionMessage = `[MCP_ERROR] The ${action.type.toLowerCase()} action with parameters "${action.parameters}" was not approved by user.`;
           conversationManager.addSystemMessage(chatId, rejectionMessage);
         }
       }
