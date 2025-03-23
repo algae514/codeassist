@@ -146,6 +146,20 @@ class ActionParser {
     if (typeof processedResult === 'string' && (actionType === 'READ' || actionType === 'VIEW')) {
       // Ensure proper newline formatting
       processedResult = this._normalizeOutput(processedResult);
+      
+      // Minimize large outputs by truncating if needed
+      if (processedResult.length > 2000) {
+        const lines = processedResult.split('\n');
+        if (lines.length > 100) {
+          // Truncate to first and last 50 lines
+          const firstLines = lines.slice(0, 50).join('\n');
+          const lastLines = lines.slice(-50).join('\n');
+          processedResult = firstLines + '\n\n[...output truncated for brevity...]\n\n' + lastLines;
+        } else if (processedResult.length > 5000) {
+          // Truncate by characters if not too many lines
+          processedResult = processedResult.substring(0, 2000) + '\n\n[...output truncated for brevity...]\n\n' + processedResult.substring(processedResult.length - 2000);
+        }
+      }
     }
     
     return `[MCP_RESULT] The ${actionType.toLowerCase()} action with parameters "${parameters}" returned:\n${processedResult}`;
@@ -159,7 +173,13 @@ class ActionParser {
    * @returns {string} - Formatted error message
    */
   formatError(actionType, parameters, error) {
-    return `[MCP_ERROR] The ${actionType.toLowerCase()} action with parameters "${parameters}" failed with error:\n${error}`;
+    // Minimize error output if too long
+    let processedError = error;
+    if (typeof processedError === 'string' && processedError.length > 1000) {
+      processedError = processedError.substring(0, 1000) + '\n\n[...error message truncated...]';
+    }
+    
+    return `[MCP_ERROR] The ${actionType.toLowerCase()} action with parameters "${parameters}" failed with error:\n${processedError}`;
   }
   /**
    * Normalize output to ensure proper display in responses

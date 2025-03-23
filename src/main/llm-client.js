@@ -142,8 +142,27 @@ Follow these protocol rules strictly to ensure commands are properly executed.`
         conversationWithSystemPrompt.push(this.systemPrompt);
       }
 
-      // Add all messages from conversation history
-      conversationWithSystemPrompt.push(...messages);
+      // Add all messages from conversation history but minimize MCP responses
+      const processedMessages = messages.map(msg => {
+        // Only process system messages that might contain MCP content
+        if (msg.systemMessage && typeof msg.content === 'string') {
+          const isMCPResult = msg.content.startsWith('[MCP_RESULT]');
+          const isMCPError = msg.content.startsWith('[MCP_ERROR]');
+          
+          if (isMCPResult || isMCPError) {
+            // Extract just the first line of the MCP message
+            const firstLine = msg.content.split('\n')[0];
+            // Create a summarized version
+            return {
+              ...msg,
+              content: `${firstLine}\n[output details available to user in UI]`
+            };
+          }
+        }
+        return msg;
+      });
+      
+      conversationWithSystemPrompt.push(...processedMessages);
 
       let requestData;
       let headers = {

@@ -244,17 +244,23 @@ code {
   border: 1px solid #444;
   border-radius: 20px;
   font-size: 14px;
-  resize: none;
-  height: 40px;
-  max-height: 150px;
+  resize: vertical;
+  min-height: 40px;
+  max-height: 300px;
   transition: height 0.2s;
   background-color: #2a2a2a;
   color: #e1e1e1;
+  cursor: ns-resize;
 }
 
 .message-input:focus {
   outline: none;
   border-color: #4d84ff;
+}
+
+.message-input.dragging {
+  cursor: ns-resize !important;
+  user-select: none;
 }
 
 .send-button {
@@ -427,6 +433,74 @@ code {
 .confirmation-buttons {
   display: flex;
   justify-content: flex-end;
+}
+
+/* MCP Output Styling - Claude Desktop Style */
+.message-mcp {
+  max-width: 90% !important;
+  padding: 0 !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.mcp-output {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  font-size: 14px;
+  margin-bottom: 8px;
+  border-radius: 6px;
+  overflow: hidden;
+  background-color: #1e1e1e;
+  border: 1px solid #333;
+}
+
+.mcp-header {
+  display: flex;
+  padding: 8px 12px;
+  background-color: #2d2d2d;
+  border-bottom: 1px solid #444;
+  align-items: center;
+}
+
+.mcp-error .mcp-action-tag {
+  background-color: #b91c1c;
+}
+
+.mcp-action-tag {
+  background-color: #3b82f6;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.mcp-parameters {
+  margin-left: 10px;
+  color: #aaa;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 70%;
+}
+
+.mcp-content {
+  padding: 12px;
+  background-color: #1e1e1e;
+  color: #eee;
+  white-space: pre-wrap;
+  overflow-x: auto;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.mcp-content pre {
+  margin: 0;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 /* Empty state */

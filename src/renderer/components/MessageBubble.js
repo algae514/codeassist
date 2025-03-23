@@ -1,6 +1,12 @@
 import React from 'react';
+import MCPOutput from './MCP/MCPOutput';
 
 const MessageBubble = ({ role, content, isSystem, systemMessage }) => {
+  // Check if this is an MCP message
+  const isMCPResult = content.startsWith('[MCP_RESULT]');
+  const isMCPError = content.startsWith('[MCP_ERROR]');
+  const isMCP = isMCPResult || isMCPError;
+  
   // Function to format code blocks and inline code
   const formatContent = (text) => {
     // First, handle code blocks with triple backticks
@@ -29,6 +35,18 @@ const MessageBubble = ({ role, content, isSystem, systemMessage }) => {
       return 'message-bubble message-assistant';
     }
   };
+
+  // For MCP messages, use the special MCPOutput component
+  if (isMCP && (isSystem || systemMessage)) {
+    return (
+      <div className="message-bubble message-system message-mcp">
+        <MCPOutput 
+          content={content}
+          isError={isMCPError} 
+        />
+      </div>
+    );
+  }
 
   return (
     <div className={getBubbleClass()}>
