@@ -1,9 +1,10 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const url = require('url');
 const Store = require('electron-store');
 const { TerminalServer } = require('./servers/terminal-server');
 const { FilesystemServer } = require('./servers/filesystem-server');
+const { BrowserServer } = require('./servers/browser-server');
 const { LLMClient } = require('./llm-client');
 const { ActionParser } = require('./action-parser');
 const { ConversationManager } = require('./conversation-manager');
@@ -14,6 +15,7 @@ const store = new Store();
 // Create servers
 const terminalServer = new TerminalServer();
 const filesystemServer = new FilesystemServer();
+const browserServer = new BrowserServer();
 
 // Create conversation manager
 const conversationManager = new ConversationManager(store);
@@ -60,6 +62,12 @@ function createWindow() {
   mainWindow.on('closed', function() {
     mainWindow = null;
   });
+  
+  // Handle external URLs to open in system browser
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url);
+    return { action: 'deny' };
+  });
 }
 
 // Create window when app is ready
@@ -70,6 +78,11 @@ app.on('window-all-closed', function() {
   if (process.platform !== 'darwin') {
     app.quit();
   }
+});
+
+// Cleanup browser resources when quitting
+app.on('before-quit', async function() {
+  await browserServer.cleanup();
 });
 
 app.on('activate', function() {
@@ -230,6 +243,7 @@ ipcMain.handle('send-message', async (event, { chatId, message }) => {
           let result;
           
           switch (action.type) {
+            // File system operations
             case 'EXECUTE':
               result = await terminalServer.executeCommand(action.parameters);
               break;
@@ -246,6 +260,54 @@ ipcMain.handle('send-message', async (event, { chatId, message }) => {
               break;
             case 'DELETE':
               result = await filesystemServer.deleteFile(action.parameters);
+              break;
+              
+            // Browser operations
+            case 'BROWSE':
+              result = await browserServer.navigateToUrl(action.parameters);
+              break;
+            case 'CLICK':
+              result = await browserServer.clickElement(action.parameters);
+              break;
+            case 'TYPE':
+              const [selector, inputText] = action.parameters.split(',').map(p => p.trim());
+              result = await browserServer.inputText(selector, inputText);
+              break;
+            case 'EXTRACT':
+              const extractResult = await browserServer.extractContent(action.parameters);
+              // Format the result for display in the chat
+              result = JSON.stringify(extractResult, null, 2);
+              break;
+            case 'SCREENSHOT':
+              const screenshotPath = await browserServer.takeScreenshot();
+              result = `Screenshot saved to: ${screenshotPath}`;
+              break;
+            case 'SCROLL':
+              const scrollParams = action.parameters.split(',').map(p => p.trim());
+              const direction = scrollParams[0] || 'down';
+              const amount = parseInt(scrollParams[1]) || 300;
+              result = await browserServer.scroll(direction, amount);
+              break;
+            case 'ELEMENTS':
+              const elements = await browserServer.getInteractiveElements();
+              result = JSON.stringify(elements, null, 2);
+              break;
+              
+            // Tab management
+            case 'NEW_TAB':
+              const tabInfo = await browserServer.createTab(action.parameters);
+              result = JSON.stringify(tabInfo, null, 2);
+              break;
+            case 'SWITCH_TAB':
+              result = await browserServer.switchTab(parseInt(action.parameters));
+              break;
+            case 'CLOSE_TAB':
+              const tabIdToClose = action.parameters.trim() ? parseInt(action.parameters) : null;
+              result = await browserServer.closeTab(tabIdToClose);
+              break;
+            case 'LIST_TABS':
+              const tabs = await browserServer.listTabs();
+              result = JSON.stringify(tabs, null, 2);
               break;
             default:
               result = `Unknown action type: ${action.type}`;

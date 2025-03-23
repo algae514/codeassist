@@ -18,6 +18,21 @@ Supported action types:
 - APPEND: Append to a file, e.g., [[APPEND: /path/to/file.txt, content to append]]
 - DELETE: Delete a file, e.g., [[DELETE: /path/to/file.txt]]
 
+Browser actions:
+- BROWSE: Navigate to a URL, e.g., [[BROWSE: https://example.com]]
+- CLICK: Click on an element, e.g., [[CLICK: button.submit-btn]] or [[CLICK: Sign in]]
+- TYPE: Input text into a field, e.g., [[TYPE: input#search, search term]]
+- EXTRACT: Extract content from page, e.g., [[EXTRACT: product prices]]
+- SCREENSHOT: Take a screenshot, e.g., [[SCREENSHOT: ]]
+- SCROLL: Scroll the page, e.g., [[SCROLL: down, 500]]
+- ELEMENTS: List all interactive elements, e.g., [[ELEMENTS: ]]
+
+Tab management:
+- LIST_TABS: List all open tabs, e.g., [[LIST_TABS: ]]
+- NEW_TAB: Open a new tab, e.g., [[NEW_TAB: https://example.com]]
+- SWITCH_TAB: Switch to another tab, e.g., [[SWITCH_TAB: 1]]
+- CLOSE_TAB: Close a tab, e.g., [[CLOSE_TAB: ]] or [[CLOSE_TAB: 2]]
+
 IMPORTANT FORMATTING RULES:
 1. Place each command on its own line OR with a space before the [[ symbols
 2. Separate the command from surrounding text with spaces

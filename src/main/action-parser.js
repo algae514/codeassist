@@ -14,7 +14,11 @@ class ActionParser {
     let match;
 
     // Supported action types
-    const supportedActions = ['EXECUTE', 'READ', 'WRITE', 'APPEND', 'DELETE'];
+    const supportedActions = [
+      'EXECUTE', 'READ', 'WRITE', 'APPEND', 'DELETE',
+      'BROWSE', 'CLICK', 'TYPE', 'EXTRACT', 'SCREENSHOT', 'SCROLL',
+      'TABS', 'NEW_TAB', 'CLOSE_TAB', 'SWITCH_TAB', 'LIST_TABS', 'ELEMENTS'
+    ];
 
     while ((match = actionRegex.exec(text)) !== null) {
       console.log(`\n[LOG] ActionParser: Found potential action match: ${match[0].substring(0, 100)}${match[0].length > 100 ? '...' : ''}`);
