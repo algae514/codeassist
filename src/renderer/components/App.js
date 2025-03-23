@@ -18,6 +18,7 @@ const App = () => {
       window.ipcRenderer.send('get-settings');
       
       window.ipcRenderer.once('settings-response', (storedSettings) => {
+        console.log('Received settings from main process:', storedSettings);
         setSettings(storedSettings);
       });
     };
@@ -105,6 +106,13 @@ const App = () => {
 
   const handleSendMessage = async (message) => {
     try {
+      // Check if API key is set
+      if (!settings.apiKey) {
+        setShowSettings(true);
+        throw new Error('API key not set. Please configure in settings.');
+      }
+      
+      // Clear any previous error state
       setLoading(true);
       
       if (!currentChatId) {
@@ -143,6 +151,23 @@ const App = () => {
       }
     } catch (error) {
       console.error('Error sending message:', error);
+      // Add error message to chat
+      if (currentChatId) {
+        // If we have a chat, add error message to it
+        setCurrentChat(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            messages: [
+              ...prev.messages,
+              { role: 'system', content: `Error: ${error.message}` }
+            ]
+          };
+        });
+      } else {
+        // If no chat exists, show an alert
+        alert(`Error: ${error.message}`);
+      }
       setLoading(false);
     }
   };

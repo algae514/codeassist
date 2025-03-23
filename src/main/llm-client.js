@@ -125,7 +125,8 @@ Follow these protocol rules strictly to ensure commands are properly executed.`
    * @returns {Promise<string>} - The LLM response
    */
   async getCompletion(messages) {
-    if (!this.apiKey) {
+    if (!this.apiKey || this.apiKey.trim() === '') {
+      console.error('LLM Client Error: API key not set or empty');
       throw new Error('API key not set. Please configure in settings.');
     }
 

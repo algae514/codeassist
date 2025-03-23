@@ -26,8 +26,11 @@ const browserServer = new BrowserServer();
 // Create conversation manager
 const conversationManager = new ConversationManager(store);
 
-// Create LLM client
+// Create LLM client with stored settings
+const apiKey = store.get('apiKey', '');
+const model = store.get('model', 'gpt-3.5-turbo');
 const llmClient = new LLMClient();
+llmClient.updateSettings(apiKey, model);
 
 // Create action parser
 const actionParser = new ActionParser();
@@ -116,17 +119,28 @@ app.on('activate', function() {
 
 // IPC Handlers
 ipcMain.on('get-settings', (event) => {
+  const apiKey = store.get('apiKey', '');
+  const model = store.get('model', 'gpt-3.5-turbo');
+  
   const settings = {
-    apiKey: store.get('apiKey', ''),
-    model: store.get('model', 'gpt-3.5-turbo')
+    apiKey: apiKey,
+    model: model
   };
+  
+  // Ensure LLM client is initialized with current settings
+  llmClient.updateSettings(apiKey, model);
+  
+  console.log('Returning stored settings to renderer process:', { ...settings, apiKey: settings.apiKey ? '****' : '' });
+  console.log('LLM client has API key:', !!llmClient.apiKey);
   event.reply('settings-response', settings);
 });
 
 ipcMain.on('save-settings', (event, settings) => {
+  console.log('Saving settings:', { ...settings, apiKey: settings.apiKey ? '****' : '' });
   store.set('apiKey', settings.apiKey);
   store.set('model', settings.model);
   llmClient.updateSettings(settings.apiKey, settings.model);
+  console.log('After saving, LLM client has API key:', !!llmClient.apiKey);
   event.reply('settings-saved', true);
 });
 
@@ -154,6 +168,19 @@ ipcMain.on('delete-chat', (event, chatId) => {
 
 ipcMain.handle('send-message', async (event, { chatId, message }) => {
   try {
+    // Check if API key is set properly
+    if (!llmClient.apiKey) {
+      // Try to retrieve from the store and update the client one more time
+      const storedApiKey = store.get('apiKey', '');
+      const storedModel = store.get('model', 'gpt-3.5-turbo');
+      if (storedApiKey) {
+        console.log('Retrieving API key from store before chat');
+        llmClient.updateSettings(storedApiKey, storedModel);
+      } else {
+        throw new Error('API key not set. Please configure in settings.');
+      }
+    }
+    
     // Add user message to conversation
     conversationManager.addUserMessage(chatId, message);
     
