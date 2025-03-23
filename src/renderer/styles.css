@@ -16,6 +16,8 @@ body {
 .app-container {
   display: flex;
   height: 100vh;
+  overflow: hidden; /* Prevent scrollbar issues */
+  width: 100%; /* Ensure it takes full width */
 }
 
 /* Sidebar */
@@ -26,6 +28,10 @@ body {
   padding: 15px;
   display: flex;
   flex-direction: column;
+  position: relative; /* Ensure it stays in the flow */
+  overflow-y: auto; /* Add scroll if content overflows */
+  min-width: 250px; /* Ensure minimum width */
+  flex-shrink: 0; /* Prevent the sidebar from shrinking */
 }
 
 .sidebar-header {

@@ -36,6 +36,7 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
+    autoHideMenuBar: false, // Prevent the menu bar from auto-hiding
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -65,6 +66,9 @@ function createWindow() {
   mainWindow.on('closed', function() {
     mainWindow = null;
   });
+  
+  // Ensure the minimum width is large enough to show the sidebar
+  mainWindow.setMinimumSize(600, 400);
   
   // Handle external URLs to open in system browser
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
