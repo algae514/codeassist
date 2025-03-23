@@ -122,10 +122,13 @@ class ConversationManager {
       throw new Error(`Chat with id ${chatId} not found`);
     }
 
+    // For MCP results and errors, we use a special format
+    // This should still appear as coming from the system in the UI
+    // but will be treated as a user message by the LLM
     this.chats[chatId].messages.push({
-      role: 'user',
-      content,
-      isSystem: true
+      role: 'user',  // Use 'user' role for compatibility with both OpenAI and Anthropic
+      content,       // Content remains the same
+      systemMessage: true // Rename from isSystem to systemMessage for clarity
     });
 
     this._saveChats();

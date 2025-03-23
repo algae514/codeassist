@@ -45,6 +45,7 @@ const ChatWindow = ({ chat, onSendMessage, loading }) => {
             role={msg.role}
             content={msg.content}
             isSystem={msg.isSystem}
+            systemMessage={msg.systemMessage}
           />
         ))}
         {loading && <TypingIndicator />}

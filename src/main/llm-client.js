@@ -130,11 +130,15 @@ Follow these protocol rules strictly to ensure commands are properly executed.`
       if (isAnthropicModel) {
         // Format for Anthropic API
         const systemPrompt = conversationWithSystemPrompt.find(msg => msg.role === 'system')?.content || '';
-        const nonSystemMessages = conversationWithSystemPrompt.filter(msg => msg.role !== 'system');
+        
+        // Clean up messages for Anthropic API - remove isSystem property and include only role and content
+        const cleanMessages = conversationWithSystemPrompt
+          .filter(msg => msg.role !== 'system')
+          .map(({ role, content }) => ({ role, content }));
         
         requestData = {
           model: this.model,
-          messages: nonSystemMessages,
+          messages: cleanMessages,
           system: systemPrompt,
           max_tokens: 4096,
           temperature: 0.7
