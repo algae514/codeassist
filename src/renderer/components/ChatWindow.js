@@ -16,6 +16,23 @@ const ChatWindow = ({ chat, onSendMessage, loading }) => {
     scrollToBottom();
   }, [chat?.messages]);
 
+  // Define mouse event handlers first to avoid reference errors
+  const handleMouseMove = useCallback((e) => {
+    if (isDragging && textAreaRef.current) {
+      const newHeight = startHeight + (e.clientY - startY);
+      // Apply min/max constraints
+      const appliedHeight = Math.max(40, Math.min(300, newHeight));
+      textAreaRef.current.style.height = `${appliedHeight}px`;
+    }
+  }, [isDragging, startHeight, startY]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+    // Remove event listeners
+    window.removeEventListener('mousemove', handleMouseMove);
+    window.removeEventListener('mouseup', handleMouseUp);
+  }, []);
+
   // Cleanup effect for event listeners
   useEffect(() => {
     return () => {
@@ -49,7 +66,9 @@ const ChatWindow = ({ chat, onSendMessage, loading }) => {
     }
   };
 
-  // Mouse events for dragging
+
+
+  // Mouse down event handler
   const handleMouseDown = useCallback((e) => {
     // Only trigger for the resize handle area
     const rect = textAreaRef.current.getBoundingClientRect();
@@ -63,23 +82,7 @@ const ChatWindow = ({ chat, onSendMessage, loading }) => {
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
     }
-  }, []);
-
-  const handleMouseMove = useCallback((e) => {
-    if (isDragging && textAreaRef.current) {
-      const newHeight = startHeight + (e.clientY - startY);
-      // Apply min/max constraints
-      const appliedHeight = Math.max(40, Math.min(300, newHeight));
-      textAreaRef.current.style.height = `${appliedHeight}px`;
-    }
-  }, [isDragging, startHeight, startY]);
-
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-    // Remove event listeners
-    window.removeEventListener('mousemove', handleMouseMove);
-    window.removeEventListener('mouseup', handleMouseUp);
-  }, [handleMouseMove]);
+  }, [handleMouseMove, handleMouseUp]);
 
   return (
     <>
