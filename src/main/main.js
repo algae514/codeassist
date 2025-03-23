@@ -5,6 +5,8 @@ const Store = require('electron-store');
 const { TerminalServer } = require('./servers/terminal-server');
 const { FilesystemServer } = require('./servers/filesystem-server');
 const { BrowserServer } = require('./servers/browser-server');
+const { ExpressServer } = require('./servers/express-server');
+const { setupDemoRoutes } = require('./servers/express-server/routes');
 const { LLMClient } = require('./llm-client');
 const { ActionParser } = require('./action-parser');
 const { ConversationManager } = require('./conversation-manager');
@@ -14,6 +16,7 @@ const store = new Store();
 
 // Create servers
 const terminalServer = new TerminalServer();
+const expressServer = new ExpressServer({ port: 3000 });
 const filesystemServer = new FilesystemServer({
   workspaceRoot: process.env.WORKSPACE_ROOT || path.join(app.getPath('userData'), 'workspace'),
   enableWorkspaceContainment: true // Re-enable workspace containment with our smarter path handling
@@ -37,6 +40,7 @@ function createWindow() {
     width: 1200,
     height: 800,
     autoHideMenuBar: false, // Prevent the menu bar from auto-hiding
+    title: 'codeX',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -78,7 +82,18 @@ function createWindow() {
 }
 
 // Create window when app is ready
-app.on('ready', createWindow);
+app.on('ready', async () => {
+  // Start the Express server
+  try {
+    await expressServer.start();
+    setupDemoRoutes(expressServer);
+    console.log('Express server started successfully');
+  } catch (error) {
+    console.error('Failed to start Express server:', error);
+  }
+  
+  createWindow();
+});
 
 // Quit when all windows are closed
 app.on('window-all-closed', function() {
@@ -90,6 +105,7 @@ app.on('window-all-closed', function() {
 // Cleanup browser resources when quitting
 app.on('before-quit', async function() {
   await browserServer.cleanup();
+  await expressServer.stop();
 });
 
 app.on('activate', function() {

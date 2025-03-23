@@ -23,7 +23,7 @@ body {
 /* Sidebar */
 .sidebar {
   width: 250px;
-  background-color: #2c3e50;
+  background-color: #1a1a1a;
   color: #fff;
   padding: 15px;
   display: flex;
@@ -46,18 +46,46 @@ body {
   font-weight: bold;
 }
 
+/* CodeX Logo */
+.codex-logo {
+  display: flex;
+  align-items: center;
+}
+
+.logo-text {
+  font-weight: bold;
+  font-size: 22px;
+  color: #ffffff;
+  font-family: 'Arial', sans-serif;
+}
+
+.logo-text::before {
+  content: '<';
+  color: #4d84ff;
+  margin-right: 2px;
+}
+
+.logo-text::after {
+  content: '>';
+  color: #4d84ff;
+  margin-left: 2px;
+}
+
 .new-chat-btn {
-  background-color: #3498db;
+  background-color: #4d84ff;
   color: white;
   border: none;
   padding: 8px 12px;
-  border-radius: 4px;
+  border-radius: 20px;
   cursor: pointer;
   font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .new-chat-btn:hover {
-  background-color: #2980b9;
+  background-color: #3a6fea;
 }
 
 .chat-list {
@@ -73,6 +101,8 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  color: #a8a8a8;
+  font-size: 14px;
 }
 
 .chat-item:hover {
@@ -80,7 +110,8 @@ body {
 }
 
 .chat-item.active {
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
 }
 
 .chat-item-content {
@@ -141,7 +172,8 @@ body {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  background-color: #ecf0f1;
+  background-color: #121212;
+  color: #e1e1e1;
 }
 
 .message-bubble {
@@ -155,16 +187,17 @@ body {
 
 .message-user {
   align-self: flex-end;
-  background-color: #3498db;
+  background-color: #4d84ff;
   color: white;
   border-bottom-right-radius: 0;
 }
 
 .message-assistant {
   align-self: flex-start;
-  background-color: #fff;
+  background-color: #2a2a2a;
+  color: #e1e1e1;
   border-bottom-left-radius: 0;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .message-system {
@@ -201,30 +234,32 @@ code {
 .input-container {
   display: flex;
   padding: 15px;
-  background-color: white;
-  border-top: 1px solid #ddd;
+  background-color: #1a1a1a;
+  border-top: 1px solid #333;
 }
 
 .message-input {
   flex: 1;
   padding: 10px 15px;
-  border: 1px solid #ddd;
+  border: 1px solid #444;
   border-radius: 20px;
   font-size: 14px;
   resize: none;
   height: 40px;
   max-height: 150px;
   transition: height 0.2s;
+  background-color: #2a2a2a;
+  color: #e1e1e1;
 }
 
 .message-input:focus {
   outline: none;
-  border-color: #3498db;
+  border-color: #4d84ff;
 }
 
 .send-button {
   margin-left: 10px;
-  background-color: #3498db;
+  background-color: #4d84ff;
   color: white;
   border: none;
   width: 40px;
@@ -237,7 +272,7 @@ code {
 }
 
 .send-button:hover {
-  background-color: #2980b9;
+  background-color: #3a6fea;
 }
 
 .send-button:disabled {
@@ -403,7 +438,8 @@ code {
   height: 100%;
   padding: 20px;
   text-align: center;
-  color: #7f8c8d;
+  color: #e1e1e1;
+  background-color: #121212;
 }
 
 .empty-state-title {
@@ -419,16 +455,17 @@ code {
 
 .empty-state-button {
   padding: 10px 20px;
-  background-color: #3498db;
+  background-color: #4d84ff;
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 20px;
   cursor: pointer;
   font-size: 16px;
+  margin-top: 20px;
 }
 
 .empty-state-button:hover {
-  background-color: #2980b9;
+  background-color: #3a6fea;
 }
 
 /* Typing indicator */
@@ -476,4 +513,46 @@ code {
     transform: scale(1);
     opacity: 1;
   }
+}
+
+/* Express Server Example */
+.express-server-example {
+  padding: 20px;
+  background-color: #1e1e1e;
+  border-radius: 5px;
+  margin: 20px 0;
+  overflow: auto;
+  width: 100%;
+}
+
+.example-header {
+  margin-bottom: 15px;
+}
+
+.example-header h2 {
+  font-size: 20px;
+  color: #ffffff;
+  margin-bottom: 5px;
+}
+
+.example-header p {
+  font-size: 14px;
+  color: #a8a8a8;
+}
+
+.code-block {
+  background-color: #2a2a2a;
+  border-radius: 5px;
+  padding: 15px;
+  overflow: auto;
+}
+
+.code-block pre {
+  margin: 0;
+  background-color: transparent;
+  color: #e1e1e1;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
 }

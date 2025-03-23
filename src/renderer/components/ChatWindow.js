@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import MessageBubble from './MessageBubble';
 import TypingIndicator from './TypingIndicator';
+import ExpressServerExample from './ExpressServerExample';
 
 const ChatWindow = ({ chat, onSendMessage, loading }) => {
   const [message, setMessage] = useState('');
@@ -39,15 +40,21 @@ const ChatWindow = ({ chat, onSendMessage, loading }) => {
   return (
     <>
       <div className="chat-container">
-        {chat?.messages.map((msg, index) => (
-          <MessageBubble
-            key={index}
-            role={msg.role}
-            content={msg.content}
-            isSystem={msg.isSystem}
-            systemMessage={msg.systemMessage}
-          />
-        ))}
+        {chat?.messages.length > 0 ? (
+          <>
+            {chat?.messages.map((msg, index) => (
+              <MessageBubble
+                key={index}
+                role={msg.role}
+                content={msg.content}
+                isSystem={msg.isSystem}
+                systemMessage={msg.systemMessage}
+              />
+            ))}
+          </>
+        ) : (
+          <ExpressServerExample />
+        )}
         {loading && <TypingIndicator />}
         <div ref={messagesEndRef} />
       </div>

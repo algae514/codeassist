@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Express Server Example</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #4d84ff;
+            margin-bottom: 20px;
+        }
+        .content {
+            background-color: #f5f5f5;
+            border-radius: 5px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        code {
+            background-color: #e0e0e0;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: Consolas, Monaco, 'Andale Mono', monospace;
+        }
+        .endpoints {
+            margin-top: 20px;
+        }
+        .endpoint {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #ddd;
+        }
+        .method {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .get { background-color: #61affe; color: white; }
+        .post { background-color: #49cc90; color: white; }
+    </style>
+</head>
+<body>
+    <h1>Express Server Example</h1>
+    
+    <div class="content">
+        <p>Welcome to the Express Server example page. This simple server demonstrates how to use Express.js to create a web server with REST API capabilities.</p>
+        
+        <div class="endpoints">
+            <h2>Available Endpoints:</h2>
+            
+            <div class="endpoint">
+                <span class="method get">GET</span>
+                <code>/</code>
+                <p>Returns this welcome page.</p>
+            </div>
+            
+            <div class="endpoint">
+                <span class="method get">GET</span>
+                <code>/api/hello</code>
+                <p>Returns a simple JSON response with a greeting message.</p>
+                <p>Example response: <code>{ "message": "Hello from Express Server API!" }</code></p>
+            </div>
+            
+            <div class="endpoint">
+                <span class="method get">GET</span>
+                <code>/api/users/:id</code>
+                <p>Returns details for a specific user based on the provided ID parameter.</p>
+                <p>Example response for <code>/api/users/123</code>: <code>{ "userId": "123", "message": "Fetching details for user 123" }</code></p>
+            </div>
+            
+            <div class="endpoint">
+                <span class="method post">POST</span>
+                <code>/api/data</code>
+                <p>Accepts JSON data in the request body and returns a confirmation with the received data.</p>
+                <p>Example request body: <code>{ "name": "John", "age": 30 }</code></p>
+                <p>Example response: <code>{ "message": "Data received successfully", "receivedData": { "name": "John", "age": 30 } }</code></p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

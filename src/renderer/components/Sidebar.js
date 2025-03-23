@@ -1,12 +1,18 @@
 import React from 'react';
 
+const CodeXLogo = () => (
+  <div className="codex-logo">
+    <span className="logo-text">codeX</span>
+  </div>
+);
+
 const Sidebar = ({ chats, currentChatId, onCreateChat, onSelectChat, onOpenSettings, onDeleteChat }) => {
   return (
     <div className="sidebar">
       <div className="sidebar-header">
-        <div className="sidebar-title">LLM MCP Client</div>
+        <div className="sidebar-title"><CodeXLogo /></div>
         <button className="new-chat-btn" onClick={onCreateChat}>
-          New Chat
+          New chat
         </button>
       </div>
       <div className="chat-list">
