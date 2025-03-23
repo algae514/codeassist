@@ -138,6 +138,28 @@ class ConversationManager {
   _saveChats() {
     this.store.set('chats', this.chats);
   }
+
+  /**
+   * Delete a chat
+   * @param {string} chatId - The chat ID to delete
+   * @returns {boolean} - Success status
+   */
+  deleteChat(chatId) {
+    if (!this.chats[chatId]) {
+      return false;
+    }
+
+    // Delete the chat
+    delete this.chats[chatId];
+    
+    // Reset current chat ID if it was the deleted chat
+    if (this.currentChatId === chatId) {
+      this.currentChatId = null;
+    }
+
+    this._saveChats();
+    return true;
+  }
 }
 
 module.exports = { ConversationManager };

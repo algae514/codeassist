@@ -1,6 +1,6 @@
 import React from 'react';
 
-const Sidebar = ({ chats, currentChatId, onCreateChat, onSelectChat, onOpenSettings }) => {
+const Sidebar = ({ chats, currentChatId, onCreateChat, onSelectChat, onOpenSettings, onDeleteChat }) => {
   return (
     <div className="sidebar">
       <div className="sidebar-header">
@@ -16,9 +16,19 @@ const Sidebar = ({ chats, currentChatId, onCreateChat, onSelectChat, onOpenSetti
             <div
               key={chat.id}
               className={`chat-item ${chat.id === currentChatId ? 'active' : ''}`}
-              onClick={() => onSelectChat(chat.id)}
             >
-              {chat.title}
+              <div className="chat-item-content" onClick={() => onSelectChat(chat.id)}>
+                {chat.title}
+              </div>
+              <button 
+                className="delete-chat-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteChat(chat.id);
+                }}
+              >
+                ×
+              </button>
             </div>
           ))}
       </div>

@@ -109,6 +109,11 @@ ipcMain.on('select-chat', (event, chatId) => {
   event.reply('chat-selected', chat);
 });
 
+ipcMain.on('delete-chat', (event, chatId) => {
+  const success = conversationManager.deleteChat(chatId);
+  event.reply('chat-deleted', { success, chatId });
+});
+
 ipcMain.handle('send-message', async (event, { chatId, message }) => {
   try {
     // Add user message to conversation

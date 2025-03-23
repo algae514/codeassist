@@ -73,6 +73,36 @@ const App = () => {
     });
   };
 
+  const handleDeleteChat = (chatId) => {
+    if (window.confirm('Are you sure you want to delete this chat?')) {
+      window.ipcRenderer.send('delete-chat', chatId);
+      
+      window.ipcRenderer.once('chat-deleted', ({ success, chatId }) => {
+        if (success) {
+          // Remove from local state
+          const updatedChats = { ...chats };
+          delete updatedChats[chatId];
+          setChats(updatedChats);
+          
+          // If the deleted chat was the current one, select another chat or show empty state
+          if (chatId === currentChatId) {
+            const remainingChats = Object.keys(updatedChats);
+            if (remainingChats.length > 0) {
+              // Sort by creation date (most recent first)
+              const sortedChats = remainingChats.sort((a, b) => {
+                return new Date(updatedChats[b].createdAt) - new Date(updatedChats[a].createdAt);
+              });
+              handleSelectChat(sortedChats[0]);
+            } else {
+              setCurrentChatId(null);
+              setCurrentChat(null);
+            }
+          }
+        }
+      });
+    }
+  };
+
   const handleSendMessage = async (message) => {
     try {
       setLoading(true);
@@ -133,6 +163,7 @@ const App = () => {
         currentChatId={currentChatId}
         onCreateChat={handleCreateChat}
         onSelectChat={handleSelectChat}
+        onDeleteChat={handleDeleteChat}
         onOpenSettings={() => setShowSettings(true)}
       />
       <div className="main-content">
