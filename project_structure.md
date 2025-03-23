@@ -129,10 +129,12 @@ llm_mcp_client/
   - Show messages from the conversation
   - Handle user input
   - Submit messages
+  - Display welcome message for new chats
 - **When to modify**:
   - Changing the chat UI
   - Fixing message display issues
   - Enhancing the chat input experience
+  - Modifying the new chat experience
 
 #### `/src/renderer/components/Sidebar.js`
 - **Purpose**: Display chat list and application controls
@@ -143,6 +145,21 @@ llm_mcp_client/
   - Changing the sidebar UI
   - Adding new sidebar features
   - Modifying chat list display
+
+#### `/src/renderer/components/WelcomeMessage.js`
+- **Purpose**: Display welcome message for new chats
+- **Responsibilities**:
+  - Show welcome message and introduction
+  - Provide a clean, user-friendly starting point for new conversations
+- **When to modify**:
+  - Changing the welcome message content or styling
+  - Adjusting the new user experience
+
+#### `/src/renderer/components/ExpressServerExample.js`
+- **Purpose**: Display Express server example code
+- **When to modify**: 
+  - Changing the example code
+  - Updating the code formatting
 
 ### Server Modules
 

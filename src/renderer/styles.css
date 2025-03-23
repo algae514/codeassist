@@ -589,6 +589,64 @@ code {
   }
 }
 
+/* Welcome Message */
+.welcome-message {
+  padding: 40px;
+  background-color: #1e1e1e;
+  border-radius: 8px;
+  margin: 40px 0;
+  width: 100%;
+  max-width: 800px;
+  align-self: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.welcome-message h2 {
+  font-size: 32px;
+  color: #ffffff;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.welcome-message p {
+  font-size: 20px;
+  color: #e1e1e1;
+  margin-bottom: 20px;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.welcome-suggestions {
+  background-color: #2a2a2a;
+  border-radius: 5px;
+  padding: 15px;
+}
+
+.welcome-suggestions h3 {
+  font-size: 18px;
+  color: #e1e1e1;
+  margin-bottom: 10px;
+}
+
+.welcome-suggestions ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.welcome-suggestions li {
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  background-color: #333;
+  border-radius: 4px;
+  color: #e1e1e1;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.welcome-suggestions li:hover {
+  background-color: #444;
+}
+
 /* Express Server Example */
 .express-server-example {
   padding: 20px;

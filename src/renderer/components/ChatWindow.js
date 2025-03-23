@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import MessageBubble from './MessageBubble';
 import TypingIndicator from './TypingIndicator';
-import ExpressServerExample from './ExpressServerExample';
+import WelcomeMessage from './WelcomeMessage';
 
 const ChatWindow = ({ chat, onSendMessage, loading }) => {
   const [message, setMessage] = useState('');
@@ -100,7 +100,9 @@ const ChatWindow = ({ chat, onSendMessage, loading }) => {
             ))}
           </>
         ) : (
-          <ExpressServerExample />
+          <WelcomeMessage onSuggestionClick={(suggestion) => {
+            setMessage(suggestion);
+          }} />
         )}
         {loading && <TypingIndicator />}
         <div ref={messagesEndRef} />
