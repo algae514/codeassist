@@ -1,77 +1,109 @@
 # LLM MCP Client
 
-A desktop application that integrates with OpenAI's large language models (LLMs) and includes embedded Micro Command Processor (MCP) servers for terminal and filesystem operations. This allows the LLM to request and execute terminal commands and file operations, with results fed back into the conversation for further processing.
+A desktop application that allows Large Language Models to interact with your local system using a Model Context Protocol (MCP).
 
-## Key Features
+## Features
 
-- **Embedded MCP Servers**:
-  - Terminal MCP Server: Executes terminal commands on your local machine.
-  - Filesystem MCP Server: Performs file operations (read, write, append, delete).
+- Connect to OpenAI or Anthropic LLMs
+- Execute terminal commands
+- Read, write, and manipulate files
+- Browse web pages
+- Multi-tab conversations
+- Persist conversation history
 
-- **LLM Integration**:
-  - Uses OpenAI models (GPT-3.5-Turbo, GPT-4).
-  - Configurable API key and model selection.
+## Enhanced File System Capabilities
 
-- **Action Requests and Execution**:
-  - LLM can request actions using specific syntax (`[[ACTION: parameters]]`).
-  - All actions require user confirmation.
-  - Results are fed back to the LLM for further processing.
+The LLM MCP Client includes robust file handling capabilities inspired by OpenManus, including:
 
-- **Chat Interface**:
-  - React-based UI with conversation history display.
-  - Multiple chat session management.
-  - Settings for API key and model selection.
+### Core File Operations
 
-## Installation
+- Read files with line numbers and selective ranges: `VIEW: path/to/file.txt, [10, 20]`
+- Precise string replacement: `REPLACE: path/to/file.txt, old string, new string`
+- Line-based insertion: `INSERT: path/to/file.txt, 10, new content`
+- Edit history with undo capability: `UNDO: path/to/file.txt`
+- Directory operations: `MKDIR: path/to/dir` and `RMDIR: path/to/dir`
+- File information: `INFO: path/to/file.txt`
+- Path checking: `EXISTS: path/to/file.txt`
 
-1. Clone the repository:
-   ```
-   git clone https://github.com/yourusername/llm-mcp-client.git
-   cd llm-mcp-client
-   ```
+### Benefits
 
-2. Install dependencies:
-   ```
-   npm install
-   ```
+- **More Precise Editing**: Edit specific portions of files without rewriting the entire file
+- **Better Context**: Line numbers and file info provide better context for LLM
+- **Safer Operations**: Path validation and workspace containment prevent errors
+- **Undo Capability**: Track history to undo changes when needed
+- **Enhanced Directory Support**: Better support for working with directories
 
-3. Start the application:
-   ```
-   npm start
-   ```
+### Example Usage
 
-## Usage
+```
+// View a file with line numbers
+[[VIEW: path/to/file.txt]]
 
-1. Configure your OpenAI API key in the Settings.
-2. Start a new chat.
-3. Enter your queries.
-4. The LLM may request actions (e.g., `[[EXECUTE: ls -l]]`), which will be presented for your approval.
-5. Approved actions will be executed, and results will be sent back to the LLM.
+// View specific lines
+[[VIEW: path/to/file.txt, [10, 20]]]
 
-## Security Considerations
+// Replace a specific string
+[[REPLACE: path/to/file.txt, old string, new string]]
 
-- All actions require explicit user confirmation.
-- Terminal commands and file operations are executed with user permissions.
-- Be cautious when approving actions that may modify your system.
+// Insert at line number
+[[INSERT: path/to/file.txt, 5, new content]]
+
+// Undo last edit
+[[UNDO: path/to/file.txt]]
+
+// Get file information
+[[INFO: path/to/file.txt]]
+
+// Check if path exists
+[[EXISTS: path/to/file.txt]]
+
+// Create directory
+[[MKDIR: path/to/directory]]
+
+// Delete directory
+[[RMDIR: path/to/directory]]
+```
+
+## Standard Operations
+
+### File Operations
+
+- `READ`: Read a file
+- `WRITE`: Write content to a file
+- `APPEND`: Append content to a file
+- `DELETE`: Delete a file
+
+### Terminal Operations
+
+- `EXECUTE`: Run a terminal command
+
+### Browser Operations
+
+- `BROWSE`: Navigate to a URL
+- `CLICK`: Click on an element
+- `TYPE`: Input text into a field
+- `EXTRACT`: Extract content from page
+- `SCREENSHOT`: Take a screenshot
+- `SCROLL`: Scroll the page
+- `ELEMENTS`: List all interactive elements
+
+### Tab Management
+
+- `LIST_TABS`: List all open tabs
+- `NEW_TAB`: Open a new tab
+- `SWITCH_TAB`: Switch to another tab
+- `CLOSE_TAB`: Close a tab
+
+## Setup & Usage
+
+1. Clone this repository
+2. Run `npm install` to install dependencies
+3. Run `npm start` to start the application
+4. Enter your OpenAI API key in the settings
+5. Start chatting with the LLM
 
 ## Development
 
-This project is built with:
-- Electron: Cross-platform desktop application framework
-- React: Frontend UI for the chat interface
-- Node.js: Backend logic for MCP servers and API interactions
-- OpenAI API: Chat Completion endpoint for LLM communication
-
-## Supported Actions
-
-| Action | Syntax | Description |
-|--------|--------|-------------|
-| EXECUTE | `[[EXECUTE: command]]` | Runs a terminal command |
-| READ | `[[READ: file_path]]` | Reads file contents |
-| WRITE | `[[WRITE: file_path, content]]` | Writes content to file |
-| APPEND | `[[APPEND: file_path, content]]` | Appends content to file |
-| DELETE | `[[DELETE: file_path]]` | Deletes a file |
-
-## License
-
-MIT
+- `npm run start` - Start the electron app in development mode
+- `npm run build` - Build the electron app for production
+- `npm run package` - Package the app for distribution

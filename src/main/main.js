@@ -14,7 +14,10 @@ const store = new Store();
 
 // Create servers
 const terminalServer = new TerminalServer();
-const filesystemServer = new FilesystemServer();
+const filesystemServer = new FilesystemServer({
+  workspaceRoot: process.env.WORKSPACE_ROOT || path.join(app.getPath('userData'), 'workspace'),
+  enableWorkspaceContainment: true // Re-enable workspace containment with our smarter path handling
+});
 const browserServer = new BrowserServer();
 
 // Create conversation manager
@@ -114,6 +117,8 @@ ipcMain.on('get-chats', (event) => {
 
 ipcMain.on('new-chat', (event) => {
   const chatId = conversationManager.createChat();
+  // Add permission property to track if user has already granted permission
+  conversationManager.chats[chatId].permissionGranted = false;
   event.reply('chat-created', { id: chatId });
 });
 
@@ -167,64 +172,42 @@ ipcMain.handle('send-message', async (event, { chatId, message }) => {
         continue;
       }
       
-      // Request user confirmation for all actions at once
-      console.log('\n[LOG] Requesting user confirmation for actions...');
+      // Check if we've already asked for permission in this chat session
+      // Storing the permission in the chat object itself
+      const chatData = conversationManager.getChat(chatId);
+      const hasPermission = chatData.permissionGranted;
       
-      // Create a more concise actions list for display
-      let actionsList = '';
+      let confirmed = !!hasPermission;
       
-      // Count the number of each action type
-      const actionCounts = {};
-      actions.forEach(action => {
-        actionCounts[action.type] = (actionCounts[action.type] || 0) + 1;
-      });
-      
-      // If there's only one action, show it in detail
-      if (actions.length === 1) {
-        const action = actions[0];
-        if (action.type === 'WRITE') {
-          const pathEnd = action.parameters.indexOf(',');
-          const filePath = pathEnd !== -1 ? action.parameters.substring(0, pathEnd).trim() : action.parameters.trim();
-          actionsList = `${action.type}: ${filePath}`;
-        } else {
-          actionsList = `${action.type}: ${action.parameters.substring(0, 200)}${action.parameters.length > 200 ? '...' : ''}`;
-        }
-      } 
-      // If there are multiple actions, summarize them
-      else {
-        // Create a summary of action types
-        actionsList = Object.entries(actionCounts).map(([type, count]) => {
-          return `${type}: ${count} action${count > 1 ? 's' : ''}`;
-        }).join('\n');
+      // If we haven't asked for permission yet, do it once per chat
+      if (!confirmed) {
+        console.log('\n[LOG] Requesting user confirmation for actions...');
         
-        // For the first action of each type, add an example
-        actionsList += '\n\nExamples:';
-        Object.keys(actionCounts).forEach(type => {
-          const example = actions.find(a => a.type === type);
-          if (example) {
-            if (type === 'WRITE') {
-              const pathEnd = example.parameters.indexOf(',');
-              const filePath = pathEnd !== -1 ? 
-                example.parameters.substring(0, pathEnd).trim() : 
-                example.parameters.trim();
-              actionsList += `\n${type}: ${filePath}`;
-            } else {
-              actionsList += `\n${type}: ${example.parameters.substring(0, 100)}${example.parameters.length > 100 ? '...' : ''}`;
-            }
-          }
-        });
+        // Determine the most restrictive permission needed
+        let permissionType = 'READ';
+        if (actions.some(a => ['WRITE', 'APPEND', 'DELETE', 'REPLACE', 'INSERT', 'UNDO', 'MKDIR', 'RMDIR'].includes(a.type))) {
+          permissionType = 'WRITE';
+        }
+        if (actions.some(a => a.type === 'EXECUTE')) {
+          permissionType = 'EXECUTE';
+        }
+        
+        const confirmOptions = {
+          type: 'question',
+          buttons: ['Allow', 'Deny'],
+          defaultId: 1, // Default to "Deny"
+          title: 'Permission',
+          message: `Allow ${permissionType.toLowerCase()} permissions?`,
+          detail: `The AI assistant is requesting ${permissionType.toLowerCase()} permission for this chat session.`
+        };
+        
+        const confirmation = await dialog.showMessageBox(mainWindow, confirmOptions);
+        confirmed = confirmation.response === 0; // 0 = "Allow", 1 = "Deny"
+        
+        // Store the permission result in the chat data
+        chatData.permissionGranted = confirmed;
       }
       
-      const confirmOptions = {
-        type: 'question',
-        buttons: ['Allow', 'Deny'],
-        defaultId: 1, // Default to "Deny"
-        title: 'Permission',
-        message: actions.every(a => a.type === 'READ' || a.type === 'EXECUTE') ? 'Allow read?' : 'Allow write?'
-      };
-      
-      const confirmation = await dialog.showMessageBox(mainWindow, confirmOptions);
-      const confirmed = confirmation.response === 0; // 0 = "Allow", 1 = "Deny"
       console.log(`\n[LOG] User ${confirmed ? 'ALLOWED' : 'DENIED'} actions`);
       
       if (!confirmed) {
@@ -243,23 +226,158 @@ ipcMain.handle('send-message', async (event, { chatId, message }) => {
           let result;
           
           switch (action.type) {
-            // File system operations
+            // Terminal operations
             case 'EXECUTE':
               result = await terminalServer.executeCommand(action.parameters);
               break;
+              
+            // Standard file operations
             case 'READ':
-              result = await filesystemServer.readFile(action.parameters);
+              console.log(`[LOG] Reading file: ${action.parameters}`);
+              // First attempt with debug info to help diagnose issues
+              if (action.firstAttempt !== false) {
+                console.log(`[LOG] First attempt at reading with debug info`);
+                action.firstAttempt = false;
+                result = await filesystemServer.readFile(action.parameters, { debug: true });
+              } else {
+                console.log(`[LOG] Regular read without debug info`);
+                result = await filesystemServer.readFile(action.parameters);
+              }
               break;
             case 'WRITE':
-              const [filePath, content] = action.parameters.split(',').map(p => p.trim());
+              console.log(`[LOG] Writing to file, parameters length: ${action.parameters.length}`);
+              
+              // Find the first comma to split parameters properly
+              const firstCommaIndex = action.parameters.indexOf(',');
+              if (firstCommaIndex === -1) {
+                throw new Error('Invalid WRITE parameters: missing comma separator');
+              }
+              
+              const filePath = action.parameters.substring(0, firstCommaIndex).trim();
+              const content = action.parameters.substring(firstCommaIndex + 1).trim();
+              
+              console.log(`[LOG] Writing to file: ${filePath}, content length: ${content.length}`);
+              if (content.length < 100) {
+                console.log(`[LOG] Content: ${content}`);
+              }
+              
               result = await filesystemServer.writeFile(filePath, content);
               break;
             case 'APPEND':
-              const [appendPath, appendContent] = action.parameters.split(',').map(p => p.trim());
+              console.log(`[LOG] Appending to file, parameters length: ${action.parameters.length}`);
+              
+              // Find the first comma to split parameters properly
+              const appendCommaIndex = action.parameters.indexOf(',');
+              if (appendCommaIndex === -1) {
+                throw new Error('Invalid APPEND parameters: missing comma separator');
+              }
+              
+              const appendPath = action.parameters.substring(0, appendCommaIndex).trim();
+              const appendContent = action.parameters.substring(appendCommaIndex + 1).trim();
+              
+              console.log(`[LOG] Appending to file: ${appendPath}, content length: ${appendContent.length}`);
+              if (appendContent.length < 100) {
+                console.log(`[LOG] Content: ${appendContent}`);
+              }
+              
               result = await filesystemServer.appendFile(appendPath, appendContent);
               break;
             case 'DELETE':
               result = await filesystemServer.deleteFile(action.parameters);
+              break;
+              
+            // Enhanced file operations
+            case 'VIEW':
+              const viewParams = action.parameters.split(',').map(p => p.trim());
+              const viewPath = viewParams[0];
+              let viewRange = null;
+              
+              if (viewParams.length > 1) {
+                try {
+                  const rangeString = viewParams[1];
+                  console.log(`[LOG] Processing view range: ${rangeString}`);
+                  
+                  // Better parsing of range parameters with error handling
+                  if (rangeString.includes('[') && rangeString.includes(']')) {
+                    // Fix potentially malformed JSON by ensuring brackets are properly closed
+                    const fixedRangeString = rangeString.replace(/\[\s*(\d+)\s*,\s*(\d+)\s*\]?/, '[$1,$2]');
+                    console.log(`[LOG] Fixed range string: ${fixedRangeString}`);
+                    viewRange = JSON.parse(fixedRangeString);
+                  } else if (rangeString.includes('-')) {
+                    const [start, end] = rangeString.split('-').map(n => parseInt(n.trim()));
+                    viewRange = [start, end];
+                  }
+                  
+                  console.log(`[LOG] Parsed view range: ${JSON.stringify(viewRange)}`);
+                } catch (e) {
+                  console.error(`[ERROR] Error parsing view range: ${e.message}`);
+                }
+              }
+              
+              // First try with debug info to diagnose possible issues
+              if (action.firstAttempt !== false) {
+                console.log(`[LOG] First attempt at viewing file with debug info`);
+                action.firstAttempt = false;
+                result = await filesystemServer.readFile(viewPath, {
+                  viewRange: viewRange,
+                  withLineNumbers: true,
+                  debug: true
+                });
+              } else {
+                console.log(`[LOG] Regular view without debug info`);
+                result = await filesystemServer.readFile(viewPath, {
+                  viewRange: viewRange,
+                  withLineNumbers: true
+                });
+              }
+              break;
+              
+            case 'REPLACE':
+              const replaceParams = action.parameters.split(',');
+              // The first parameter is the file path
+              const replacePath = replaceParams[0].trim();
+              // The content after the first comma up to the last comma is the oldStr
+              // (this handles commas within the strings)
+              const oldStrEndIndex = action.parameters.lastIndexOf(',');
+              const afterFirstComma = action.parameters.indexOf(',') + 1;
+              const oldStr = action.parameters.substring(afterFirstComma, oldStrEndIndex).trim();
+              // The content after the last comma is the newStr
+              const newStr = action.parameters.substring(oldStrEndIndex + 1).trim();
+              
+              result = await filesystemServer.strReplace(replacePath, oldStr, newStr);
+              break;
+              
+            case 'INSERT':
+              const insertParams = action.parameters.split(',');
+              const insertPath = insertParams[0].trim();
+              const lineNumber = parseInt(insertParams[1].trim());
+              // Get everything after the second comma as the content to insert
+              const secondCommaIndex = action.parameters.indexOf(',', action.parameters.indexOf(',') + 1);
+              const contentToInsert = action.parameters.substring(secondCommaIndex + 1).trim();
+              
+              result = await filesystemServer.insertAtLine(insertPath, lineNumber, contentToInsert);
+              break;
+              
+            case 'UNDO':
+              result = await filesystemServer.undoEdit(action.parameters);
+              break;
+              
+            case 'INFO':
+              const fileInfo = await filesystemServer.getFileInfo(action.parameters);
+              result = JSON.stringify(fileInfo, null, 2);
+              break;
+              
+            case 'MKDIR':
+              result = await filesystemServer.createDirectory(action.parameters);
+              break;
+              
+            case 'RMDIR':
+              result = await filesystemServer.deleteDirectory(action.parameters, { recursive: true });
+              break;
+              
+            case 'EXISTS':
+              const exists = await filesystemServer.exists(action.parameters);
+              result = exists ? 'The path exists.' : 'The path does not exist.';
               break;
               
             // Browser operations
@@ -319,13 +437,13 @@ ipcMain.handle('send-message', async (event, { chatId, message }) => {
             console.log(`\n[LOG] First 200 chars of result: ${result.substring(0, 200)}${result.length > 200 ? '...' : ''}`);
           }
           
-          const resultMessage = `[MCP_RESULT] The ${action.type.toLowerCase()} action with parameters "${action.parameters}" returned:\n${result}`;
+          const resultMessage = actionParser.formatResult(action.type, action.parameters, result);
           conversationManager.addSystemMessage(chatId, resultMessage);
           
         } catch (error) {
           // Add error message to conversation
           console.log(`\n[LOG] Action failed with error: ${error.message}`);
-          const errorMessage = `[MCP_ERROR] The ${action.type.toLowerCase()} action with parameters "${action.parameters}" failed with error:\n${error.message}`;
+          const errorMessage = actionParser.formatError(action.type, action.parameters, error.message);
           conversationManager.addSystemMessage(chatId, errorMessage);
         }
       }

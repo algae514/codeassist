@@ -15,7 +15,11 @@ class ActionParser {
 
     // Supported action types
     const supportedActions = [
+      // Standard actions
       'EXECUTE', 'READ', 'WRITE', 'APPEND', 'DELETE',
+      // Enhanced file operations
+      'VIEW', 'REPLACE', 'INSERT', 'UNDO', 'INFO', 'MKDIR', 'RMDIR', 'EXISTS',
+      // Browser operations
       'BROWSE', 'CLICK', 'TYPE', 'EXTRACT', 'SCREENSHOT', 'SCROLL',
       'TABS', 'NEW_TAB', 'CLOSE_TAB', 'SWITCH_TAB', 'LIST_TABS', 'ELEMENTS'
     ];
@@ -55,9 +59,63 @@ class ActionParser {
           }
           break;
         
+        case 'REPLACE':
+          // Validate REPLACE format: path, oldString, newString
+          const replaceParams = action.parameters.split(',');
+          if (replaceParams.length < 3) {
+            console.log(`\n[LOG] ActionParser: Validation failed for ${action.type} - incorrect format`);
+            action.error = `Invalid format for ${action.type}. Expected: ${action.type}: file_path, old_string, new_string`;
+          }
+          break;
+          
+        case 'INSERT':
+          // Validate INSERT format: path, lineNumber, content
+          const insertParams = action.parameters.split(',');
+          if (insertParams.length < 3) {
+            console.log(`\n[LOG] ActionParser: Validation failed for ${action.type} - incorrect format`);
+            action.error = `Invalid format for ${action.type}. Expected: ${action.type}: file_path, line_number, content`;
+          } else {
+            // Check if second parameter is a number
+            const lineNumber = parseInt(insertParams[1].trim());
+            if (isNaN(lineNumber)) {
+              action.error = `Invalid line number for ${action.type}. Expected a number.`;
+            }
+          }
+          break;
+          
+        case 'VIEW':
+          // Check if there's a line range specified
+          const viewParams = action.parameters.split(',');
+          if (viewParams.length > 1) {
+            // Try to parse the line range
+            try {
+              const rangeString = viewParams[1].trim();
+              // Support [1, 10] or 1-10 format
+              if (rangeString.includes('[') && rangeString.includes(']')) {
+                const range = JSON.parse(rangeString);
+                if (!Array.isArray(range) || range.length !== 2) {
+                  action.error = `Invalid line range format for ${action.type}. Expected: [start, end]`;
+                }
+              } else if (rangeString.includes('-')) {
+                const rangeParts = rangeString.split('-');
+                if (rangeParts.length !== 2 || isNaN(parseInt(rangeParts[0])) || isNaN(parseInt(rangeParts[1]))) {
+                  action.error = `Invalid line range format for ${action.type}. Expected: start-end`;
+                }
+              }
+            } catch (e) {
+              action.error = `Invalid line range format for ${action.type}: ${e.message}`;
+            }
+          }
+          break;
+        
         case 'READ':
         case 'DELETE':
         case 'EXECUTE':
+        case 'MKDIR':
+        case 'RMDIR':
+        case 'INFO':
+        case 'UNDO':
+        case 'EXISTS':
           // These just need a non-empty parameter
           if (!action.parameters.trim()) {
             console.log(`\n[LOG] ActionParser: Validation failed for ${action.type} - empty parameters`);
@@ -81,7 +139,16 @@ class ActionParser {
    * @returns {string} - Formatted result message
    */
   formatResult(actionType, parameters, result) {
-    return `[MCP_RESULT] The ${actionType.toLowerCase()} action with parameters "${parameters}" returned:\n${result}`;
+    // Fix common issues with file content display
+    let processedResult = result;
+    
+    // Check if this is a file content and has escaped newlines
+    if (typeof processedResult === 'string' && (actionType === 'READ' || actionType === 'VIEW')) {
+      // Ensure proper newline formatting
+      processedResult = this._normalizeOutput(processedResult);
+    }
+    
+    return `[MCP_RESULT] The ${actionType.toLowerCase()} action with parameters "${parameters}" returned:\n${processedResult}`;
   }
 
   /**
@@ -93,6 +160,35 @@ class ActionParser {
    */
   formatError(actionType, parameters, error) {
     return `[MCP_ERROR] The ${actionType.toLowerCase()} action with parameters "${parameters}" failed with error:\n${error}`;
+  }
+  /**
+   * Normalize output to ensure proper display in responses
+   * @param {string} output - The text to normalize
+   * @returns {string} - Normalized text
+   * @private
+   */
+  _normalizeOutput(output) {
+    if (typeof output !== 'string') return output;
+    
+    // Log the original output for debugging
+    console.log(`[LOG] Original output length: ${output.length}`);
+    if (output.length < 100) {
+      console.log(`[LOG] Original output: ${output}`);
+    }
+    
+    // Fix common issues
+    let normalized = output;
+    
+    // Replace escaped newlines with actual newlines
+    // This is for cases where the string contains literal '\n' instead of actual newlines
+    normalized = normalized.replace(/\\n/g, '\n');
+    
+    // Replace escaped tabs with actual tabs
+    normalized = normalized.replace(/\\t/g, '\t');
+    
+    // Log the normalized output for debugging
+    console.log(`[LOG] Normalized output length: ${normalized.length}`);
+    return normalized;
   }
 }
 

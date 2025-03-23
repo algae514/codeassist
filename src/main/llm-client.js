@@ -12,13 +12,27 @@ When you need to perform actions on the local system, you MUST use the following
 [[ACTION_TYPE: parameters]]
 
 Supported action types:
-- EXECUTE: Run a terminal command, e.g., [[EXECUTE: ls -l]]
+
+Standard File Operations:
 - READ: Read a file, e.g., [[READ: /path/to/file.txt]]
 - WRITE: Write to a file, e.g., [[WRITE: /path/to/file.txt, content to write]]
 - APPEND: Append to a file, e.g., [[APPEND: /path/to/file.txt, content to append]]
 - DELETE: Delete a file, e.g., [[DELETE: /path/to/file.txt]]
 
-Browser actions:
+Enhanced File Operations:
+- VIEW: View file with line numbers and optional range, e.g., [[VIEW: /path/to/file.txt]] or [[VIEW: /path/to/file.txt, [10, 20]]]
+- REPLACE: Replace a specific string in a file, e.g., [[REPLACE: /path/to/file.txt, old string to replace, new string]]
+- INSERT: Insert text at a specific line, e.g., [[INSERT: /path/to/file.txt, 10, content to insert]]
+- UNDO: Undo the last edit to a file, e.g., [[UNDO: /path/to/file.txt]]
+- INFO: Get file information, e.g., [[INFO: /path/to/file.txt]]
+- EXISTS: Check if a path exists, e.g., [[EXISTS: /path/to/file.txt]]
+- MKDIR: Create a directory, e.g., [[MKDIR: /path/to/directory]]
+- RMDIR: Delete a directory, e.g., [[RMDIR: /path/to/directory]]
+
+Terminal Operations:
+- EXECUTE: Run a terminal command, e.g., [[EXECUTE: ls -l]]
+
+Browser Operations:
 - BROWSE: Navigate to a URL, e.g., [[BROWSE: https://example.com]]
 - CLICK: Click on an element, e.g., [[CLICK: button.submit-btn]] or [[CLICK: Sign in]]
 - TYPE: Input text into a field, e.g., [[TYPE: input#search, search term]]
@@ -27,7 +41,7 @@ Browser actions:
 - SCROLL: Scroll the page, e.g., [[SCROLL: down, 500]]
 - ELEMENTS: List all interactive elements, e.g., [[ELEMENTS: ]]
 
-Tab management:
+Tab Management:
 - LIST_TABS: List all open tabs, e.g., [[LIST_TABS: ]]
 - NEW_TAB: Open a new tab, e.g., [[NEW_TAB: https://example.com]]
 - SWITCH_TAB: Switch to another tab, e.g., [[SWITCH_TAB: 1]]
@@ -41,42 +55,35 @@ IMPORTANT FORMATTING RULES:
 5. If you need to execute another command after seeing the results, include that command in your next response
 6. If you have no more commands to execute, simply provide your final response without any [[ ]] syntax
 
+Advanced File Operation Guidelines:
+- When using the REPLACE command, ensure the string to replace is EXACT and unique in the file
+- For multiple occurrences, use VIEW with line numbers to identify the specific text, then use more context in your REPLACE
+- Use INSERT to add content at specific line positions (0-based indexing)
+- Use VIEW with line numbers to see file content with line numbers for easier reference
+
 Example of correct usage for multi-step workflows:
 
-1. You can issue a command:
-   I'll check the contents of the directory.
-   [[EXECUTE: ls -l /path/to/directory]]
+1. You can view a file with line numbers:
+   Let me check the contents of the file with line numbers.
+   [[VIEW: /path/to/file.txt]]
 
-2. You will receive the result:
-   [MCP_RESULT] The execute action with parameters "ls -l /path/to/directory" returned:
-   (command output here)
+2. You will receive the result with line numbers:
+   [MCP_RESULT] The view action with parameters "/path/to/file.txt" returned:
+   (file content with line numbers)
 
-3. You can issue a follow-up command based on the result:
-   I see several files. Let me check one of them.
-   [[READ: /path/to/directory/file.txt]]
+3. You can make a precise text replacement:
+   I'll fix the typo on line 15.
+   [[REPLACE: /path/to/file.txt, function getName(), function getFullName()]]
 
-4. When you're done with all commands, provide your final response without any [[ ]] syntax.
+4. You can check the file information:
+   Let me check when this file was last modified.
+   [[INFO: /path/to/file.txt]]
+
+5. When you're done with all commands, provide your final response without any [[ ]] syntax.
 
 Examples of incorrect usage:
 1. I'll check the contents of the directory[[EXECUTE: ls -l /path/to/directory]] and then we can proceed.  <-- Missing space before [[
 2. Let me execute this command. [[EXECUTE: ls -l /path/to/directory]] The results will help us.
-
-Example of correct usage with proper spacing:
-I'll create a file with project structure. [[WRITE: /path/to/project/structure.txt, Project structure content goes here]]
-
-Handling large outputs or errors:
-If a command produces too much output or fails, you can try a more specific command in your next response:
-
-1. First command:
-   [[EXECUTE: find /path -print]]
-
-2. Result with error:
-   [MCP_RESULT] The execute action with parameters "find /path -print" returned:
-   Output exceeded maximum buffer size.
-
-3. Follow-up with more specific command:
-   I'll try a more focused approach.
-   [[EXECUTE: find /path -maxdepth 2 -type d]]
 
 The system will automatically process your follow-up commands without requiring user intervention.
 

@@ -1,0 +1,7 @@
+# Test File
+# Created for demonstrating enhanced file operations
+Line 1: This is a test file.
+Line 2: It contains multiple lines.
+Line 3: This is a newly inserted line.
+Line 4: OpenManus has powerful file editing capabilities that we are implementing.
+Line 5: These capabilities have been implemented in LLM_MCP_Client.
