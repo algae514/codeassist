@@ -18,6 +18,8 @@ body {
   height: 100vh;
   overflow: hidden; /* Prevent scrollbar issues */
   width: 100%; /* Ensure it takes full width */
+  position: relative; /* Ensure proper stacking context */
+  z-index: 0; /* Establish a stacking context */
 }
 
 /* Sidebar */
@@ -32,6 +34,8 @@ body {
   overflow-y: auto; /* Add scroll if content overflows */
   min-width: 250px; /* Ensure minimum width */
   flex-shrink: 0; /* Prevent the sidebar from shrinking */
+  z-index: 1; /* Ensure sidebar appears above other content */
+  border-right: 1px solid #333; /* Add a border to visually separate */
 }
 
 .sidebar-header {
@@ -163,6 +167,10 @@ body {
   display: flex;
   flex-direction: column;
   height: 100%;
+  margin-left: 0; /* Ensure no margin pushes it away from sidebar */
+  max-width: calc(100% - 250px); /* Ensure it doesn't exceed available space */
+  position: relative; /* Create stacking context */
+  z-index: 0; /* Lower than sidebar to ensure proper layering */
 }
 
 /* Chat container */

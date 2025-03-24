@@ -1,6 +1,7 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyPlugin = require('copy-webpack-plugin');
+const webpack = require('webpack');
 
 module.exports = {
   mode: 'development',
@@ -37,6 +38,10 @@ module.exports = {
       patterns: [
         { from: './src/renderer/styles.css', to: 'styles.css' }
       ],
+    }),
+    // Add DefinePlugin to ensure proper environment variables
+    new webpack.DefinePlugin({
+      'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development')
     })
   ],
   resolve: {
